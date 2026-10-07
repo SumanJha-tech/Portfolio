@@ -3,12 +3,13 @@ import { profile } from '../data/content'
 import { IconGitHub, IconLinkedIn, IconMail, IconPhone } from '../lib/icons'
 import { useReveal } from '../lib/useReveal'
 
-// Form delivery (messages go to the owner inbox, never the visitor):
-//  1) VITE_WEB3FORMS_KEY set -> Web3Forms (free access key, no per-form activation).
-//  2) otherwise FormSubmit -> emails profile.email (needs a ONE-TIME activation click on the first message).
-// If sending fails, an error message with the direct email address is shown (the mail app is never opened automatically).
+// Form delivery. Messages always go to the owner inbox (never the visitor). Tried in this order:
+//  1) Web3Forms from the browser, if VITE_WEB3FORMS_KEY is set (free plan only accepts browser requests; no activation click).
+//  2) The site's own relay /api/contact -> FormSubmit (not affected by ad blockers).
+//  3) FormSubmit directly from the browser.
+// If all fail, an error with the direct email address is shown (the mail app is never opened automatically).
 const W3_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
-const ENDPOINT = W3_KEY ? 'https://api.web3forms.com/submit' : `https://formsubmit.co/ajax/${profile.email}`
+const FORMSUBMIT = `https://formsubmit.co/ajax/${profile.email}`
 
 type Errors = Partial<Record<'name' | 'email' | 'message', string>>
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -47,22 +48,34 @@ export function Contact() {
     if (honey) { setStatus('sent'); return } // bots fill the hidden field
     setStatus('sending')
     const subject = `Portfolio enquiry from ${vals.name.trim()}`
-    const payload = W3_KEY
-      ? { access_key: W3_KEY, subject, from_name: vals.name.trim(), name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim() }
-      : { name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim(), _subject: subject, _replyto: vals.email.trim(), _template: 'table' }
-    const attempt = async () => {
-      const res = await fetch(ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      })
+    const fields = { name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim() }
+    const post = async (url: string, body: unknown, accept = 'application/json') => {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: accept }, body: JSON.stringify(body) })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok || data.success === 'false' || data.success === false) throw new Error('send failed')
+      const ok = res.ok && data.success !== 'false' && data.success !== false
+      return { ok, data }
+    }
+    const viaWeb3Forms = async () => {
+      if (!W3_KEY) throw new Error('no key')
+      const { ok } = await post('https://api.web3forms.com/submit', { access_key: W3_KEY, subject, from_name: fields.name, ...fields })
+      if (!ok) throw new Error('web3forms failed')
+    }
+    const viaRelay = async () => {
+      const { ok, data } = await post('/api/contact', fields)
+      if (!ok) {
+        if (data.error === 'activation') console.warn('[contact form] FormSubmit needs one-time activation for this site address: open the "Activate Form" email sent to the owner, or set VITE_WEB3FORMS_KEY (see DEPLOY_VERCEL.md, Part 3).')
+        throw new Error('relay failed')
+      }
+    }
+    const viaFormSubmit = async () => {
+      const { ok } = await post(FORMSUBMIT, { ...fields, _subject: subject, _replyto: fields.email, _template: 'table' })
+      if (!ok) throw new Error('formsubmit failed')
     }
     try {
-      try { await attempt() } catch { await new Promise((r) => setTimeout(r, 800)); await attempt() }
-      setStatus('sent')
-      setVals({ name: '', email: '', message: '' })
+      for (const step of [viaWeb3Forms, viaRelay, viaFormSubmit]) {
+        try { await step(); setStatus('sent'); setVals({ name: '', email: '', message: '' }); return } catch { /* try next route */ }
+      }
+      setStatus('error')
     } catch {
       setStatus('error')
     }
@@ -108,7 +121,7 @@ export function Contact() {
             <button className="btn primary" type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Sending…' : 'Send message'}</button>
             <div role="status" aria-live="polite">
               {status === 'sent' && <p className="form-status">Thanks! Your message was sent. I will reply to the email you gave.</p>}
-              {status === 'error' && <p className="form-status error">Sorry, the message could not be sent right now (an ad blocker can cause this). Please email me directly at <a href={`mailto:${profile.email}`}>{profile.email}</a>.</p>}
+              {status === 'error' && <p className="form-status error">Sorry, the message could not be sent right now (a browser extension or network filter can cause this). Please email me directly at <a href={`mailto:${profile.email}`}>{profile.email}</a>.</p>}
             </div>
           </form>
         </div>

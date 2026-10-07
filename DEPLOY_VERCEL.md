@@ -39,16 +39,16 @@ Your original photos are in the `_private` folder and are not uploaded (ignored 
 
 ## Part 3: Make the contact form deliver to your Gmail (important)
 
-Anyone who fills the form types their own name, email and message. The message is **emailed to you at sumanjha0906@gmail.com**. The visitor never needs your password.
+Anyone who fills the form types their own name, email and message. The message is **emailed to you at sumanjha0906@gmail.com**. The visitor never needs your password. The site tries Web3Forms first, then a relay on your own site (`/api/contact`), then FormSubmit, so one blocked route does not stop the message.
 
-**Option A (recommended, most reliable): Web3Forms key**
+**Option A (recommended, works everywhere): Web3Forms key**
 1. Go to https://web3forms.com, type `sumanjha0906@gmail.com` and click **Create Access Key**.
 2. Open your Gmail and copy the **access key** from their email.
-3. In Vercel: your project, **Settings**, **Environment Variables**, add `VITE_WEB3FORMS_KEY` with your key, **Save**, then **Deployments**, latest one, **...**, **Redeploy**.
-4. For local testing, also put it in the `.env` file as `VITE_WEB3FORMS_KEY=...` and restart `npm run dev`.
+3. In the project folder open the `.env` file and add a line: `VITE_WEB3FORMS_KEY=your-key` (then stop and restart `npm run dev`).
+4. In Vercel: your project, **Settings**, **Environment Variables**, add `VITE_WEB3FORMS_KEY` with the same key, **Save**, then **Deployments**, latest one, **...**, **Redeploy**.
 
-**Option B (no key): FormSubmit, one-time activation**
-If you do nothing, the site uses FormSubmit. The **first** message makes FormSubmit email you an **activation link**. Open Gmail (check Spam and Promotions) and click the confirm button once. Until you click it, messages are not delivered and the visitor's email app opens instead.
+**Option B (no key): FormSubmit**
+Works without a key, but FormSubmit wants you to click an **Activate Form** link in Gmail **once for every different site address** (for example `localhost:5173`, `127.0.0.1:5173`, and your Vercel address). Until you click it, the form shows an error. Check Gmail (also Spam and Promotions) for emails from FormSubmit.
 
 Always send one test message after setup and check your inbox.
 
