@@ -4,7 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "sync-resume": "node scripts/sync-resume.mjs",
+    "predev": "npm run sync-resume",
     "dev": "vite",
+    "prebuild": "npm run sync-resume",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
