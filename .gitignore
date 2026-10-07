@@ -1,0 +1,7 @@
+*.log
+.DS_Store
+.env
+_private
+dist
+node_modules
+Profile Photot*.png
