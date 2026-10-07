@@ -376,10 +376,11 @@ export const experience = {
 }
 
 export const education = {
-  degree: 'B.Tech, Computer Software Engineering',
+  degree: 'B.Tech in Computer Science Engineering',
   school: 'ITM University, Gwalior',
+  specialization: 'Specialization in Data Science and Machine Learning',
   period: 'Sep 2021 – Jun 2025',
-  detail: 'CGPA 8.07 · Specialisation in Data Science and Machine Learning',
+  cgpa: 'CGPA: 8.07/10',
   note: 'Built hands-on skills in analytics, automation and BI through academic projects and virtual internships, including procurement automation, web scraping and Power BI / Tableau dashboards.',
 }
 

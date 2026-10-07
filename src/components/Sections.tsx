@@ -78,7 +78,7 @@ export function Experience() {
           </article>
           <div className="card edu">
             <h3>Education</h3>
-            <p className="d"><b>{education.degree}</b><br />{education.school}<br /><span className="muted">{education.period} · {education.detail}</span></p>
+            <p className="d"><b>{education.degree}</b><br />{education.school}<br />{education.specialization}<br /><span className="muted">{education.cgpa} · {education.period}</span></p>
             <p className="d small">{education.note}</p>
           </div>
         </div>
