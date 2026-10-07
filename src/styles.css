@@ -511,3 +511,6 @@ footer { background: var(--bg-alt); border-top: 1px solid var(--line); }
 .role-head .when { flex: 0 0 auto; white-space: nowrap; }
 @media (max-width: 700px) { .role-head .when { white-space: normal; } }
 .role-head .when { flex: 1 1 100%; text-align: left; white-space: normal; margin-top: 8px; }
+
+.form-status.error { background: #fbeae5; color: #7a2a1b; }
+.form-status.error a { color: inherit; font-weight: 600; }

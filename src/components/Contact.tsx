@@ -6,7 +6,7 @@ import { useReveal } from '../lib/useReveal'
 // Form delivery (messages go to the owner inbox, never the visitor):
 //  1) VITE_WEB3FORMS_KEY set -> Web3Forms (free access key, no per-form activation).
 //  2) otherwise FormSubmit -> emails profile.email (needs a ONE-TIME activation click on the first message).
-// If sending fails, the visitor email app opens with the message ready so nothing is lost.
+// If sending fails, an error message with the direct email address is shown (the mail app is never opened automatically).
 const W3_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
 const ENDPOINT = W3_KEY ? 'https://api.web3forms.com/submit' : `https://formsubmit.co/ajax/${profile.email}`
 
@@ -17,7 +17,7 @@ function validate(v: { name: string; email: string; message: string }): Errors {
   const e: Errors = {}
   if (v.name.trim().length < 2) e.name = 'Please enter your name.'
   if (!emailRe.test(v.email.trim())) e.email = 'Enter a valid email, like name@company.com.'
-  if (v.message.trim().length < 20) e.message = 'Tell me a little more (at least 20 characters).'
+  if (!v.message.trim()) e.message = 'Please write a message.'
   return e
 }
 
@@ -25,7 +25,7 @@ export function Contact() {
   const ref = useReveal<HTMLDivElement>()
   const [vals, setVals] = useState({ name: '', email: '', message: '' })
   const [errors, setErrors] = useState<Errors>({})
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'fallback'>('idle')
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [honey, setHoney] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -46,11 +46,11 @@ export function Contact() {
     }
     if (honey) { setStatus('sent'); return } // bots fill the hidden field
     setStatus('sending')
-    try {
-      const subject = `Portfolio enquiry from ${vals.name.trim()}`
-      const payload = W3_KEY
-        ? { access_key: W3_KEY, subject, from_name: vals.name.trim(), name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim() }
-        : { name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim(), _subject: subject, _replyto: vals.email.trim(), _template: 'table' }
+    const subject = `Portfolio enquiry from ${vals.name.trim()}`
+    const payload = W3_KEY
+      ? { access_key: W3_KEY, subject, from_name: vals.name.trim(), name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim() }
+      : { name: vals.name.trim(), email: vals.email.trim(), message: vals.message.trim(), _subject: subject, _replyto: vals.email.trim(), _template: 'table' }
+    const attempt = async () => {
       const res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -58,15 +58,13 @@ export function Contact() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.success === 'false' || data.success === false) throw new Error('send failed')
+    }
+    try {
+      try { await attempt() } catch { await new Promise((r) => setTimeout(r, 800)); await attempt() }
       setStatus('sent')
       setVals({ name: '', email: '', message: '' })
     } catch {
-      const subject = encodeURIComponent(`Portfolio enquiry from ${vals.name.trim()}`)
-      const body = encodeURIComponent(`${vals.message.trim()}
-
-— ${vals.name.trim()} (${vals.email.trim()})`)
-      window.location.href = `mailto:${profile.email}?subject=${subject}&body=${body}`
-      setStatus('fallback')
+      setStatus('error')
     }
   }
 
@@ -110,7 +108,7 @@ export function Contact() {
             <button className="btn primary" type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Sending…' : 'Send message'}</button>
             <div role="status" aria-live="polite">
               {status === 'sent' && <p className="form-status">Thanks! Your message was sent. I will reply to the email you gave.</p>}
-              {status === 'fallback' && <p className="form-status">Could not send directly, so your email app was opened with the message ready. You can also write to {profile.email}.</p>}
+              {status === 'error' && <p className="form-status error">Sorry, the message could not be sent right now (an ad blocker can cause this). Please email me directly at <a href={`mailto:${profile.email}`}>{profile.email}</a>.</p>}
             </div>
           </form>
         </div>
