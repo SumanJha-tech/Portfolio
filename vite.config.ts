@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // base './' keeps asset URLs relative so the same build works on Vercel and any static host.
 export default defineConfig({
   base: './',
-  plugins: [react(), contactApi()],
+  plugins: [react(), contactApi(), siteUrl()],
   build: { target: 'es2020', chunkSizeWarningLimit: 600 },
 })
 
@@ -35,5 +35,21 @@ function contactApi(): Plugin {
     },
     configureServer: mount,
     configurePreviewServer: mount,
+  }
+}
+
+/** Fills the canonical / Open Graph URLs in index.html. Uses VITE_SITE_URL, else the Vercel production URL, else the default below. */
+function siteUrl(): Plugin {
+  const fallback = 'https://sumanjha-portfolio.vercel.app'
+  return {
+    name: 'site-url',
+    transformIndexHtml: {
+      order: 'pre',
+      handler(html) {
+        const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : ''
+        const site = (process.env.VITE_SITE_URL || vercel || fallback).replace(/\/+$/, '')
+        return html.replaceAll('%VITE_SITE_URL%', site)
+      },
+    },
   }
 }
